@@ -868,10 +868,13 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                     m_isVisible = !!isVisible;
                 }
             }
-            // get_Visible fails when running in the designer, in which case we leave m_isVisible set to true.
-            else if (SUCCEEDED(m_window->get_Visible(&isVisible)))
+            else if (m_window)
             {
-                m_isVisible = !!isVisible;
+                // get_Visible fails when running in the designer, in which case we leave m_isVisible set to true.
+                if (SUCCEEDED(m_window->get_Visible(&isVisible)))
+                {
+                    m_isVisible = !!isVisible;
+                }
             }
         }
 
@@ -1009,7 +1012,11 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                 {
                     auto lock = GetLock();
                     boolean wasVisible = m_isVisible;
-                    UpdateIsVisible();
+					boolean isLoaded = m_isLoaded;
+                    if (isLoaded)
+                    {
+                        UpdateIsVisible();
+                    }
                     boolean isVisible = m_isVisible;
                     lock.unlock();
 
@@ -1018,7 +1025,10 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                         WindowVisibilityChanged();
                     }
 
-                    UpdateDpi();
+                    if (isLoaded)
+                    {
+                        UpdateDpi();
+                    }
                 });
         }
     };
