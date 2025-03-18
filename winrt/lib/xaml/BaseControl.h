@@ -1012,11 +1012,7 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                 {
                     auto lock = GetLock();
                     boolean wasVisible = m_isVisible;
-					boolean isLoaded = m_isLoaded;
-                    if (isLoaded)
-                    {
-                        UpdateIsVisible();
-                    }
+                    UpdateIsVisible();
                     boolean isVisible = m_isVisible;
                     lock.unlock();
 
@@ -1025,10 +1021,7 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                         WindowVisibilityChanged();
                     }
 
-                    if (isLoaded)
-                    {
-                        UpdateDpi();
-                    }
+                    UpdateDpi();
                 });
         }
     };
