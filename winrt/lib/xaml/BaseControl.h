@@ -868,13 +868,18 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                     m_isVisible = !!isVisible;
                 }
             }
-            else if (m_window)
+            else if (m_window)  // added a null reference check
             {
                 // get_Visible fails when running in the designer, in which case we leave m_isVisible set to true.
                 if (SUCCEEDED(m_window->get_Visible(&isVisible)))
                 {
                     m_isVisible = !!isVisible;
                 }
+            }
+            else
+            {
+                // When there is neither a XAML root nor a window we aren't visible
+                m_isVisible = false;
             }
         }
 
@@ -1007,25 +1012,33 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
 
         HRESULT OnXamlRootChanged(IXamlRoot*, IXamlRootChangedEventArgs*)
         {
+            // NOTE:
+            // Because OnUnloaded unregisters the events outside a lock, it's possible for
+            // m_isLoaded to be changed while we're executing the code within the 
+            // ExceptionBoundary lambda.  Additional checks have been added to reduce the chance
+            // of incorrectly calling functions within the lambda but we're still seeing
+            // some deadlocks when trying to get the mutex within the lock.
+
             return ExceptionBoundary(
                 [&]
                 {
+
                     auto lock = GetLock();
+			        boolean isLoaded = m_isLoaded;  
                     boolean wasVisible = m_isVisible;
-					boolean isLoaded = m_isLoaded;
-                    if (isLoaded)
+					if (isLoaded)                   // added check to see if the control is still loaded
                     {
                         UpdateIsVisible();
                     }
                     boolean isVisible = m_isVisible;
                     lock.unlock();
 
-                    if (wasVisible != isVisible)
+					if (wasVisible != isVisible)    // added check to see if the visibility has changed
                     {
                         WindowVisibilityChanged();
                     }
 
-                    if (isLoaded)
+                    if (isLoaded)                   // added check to see if the control is still loaded
                     {
                         UpdateDpi();
                     }
