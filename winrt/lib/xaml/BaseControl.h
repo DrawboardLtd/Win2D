@@ -6,6 +6,8 @@
 
 #include "RemoveFromVisualTree.h"
 #include "utils/LockUtilities.h"
+#include <random>
+#include <Windows.h>
 
 namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { namespace UI { namespace Xaml
 {
@@ -138,6 +140,8 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
 
         ComPtr<ICanvasDevice> m_customDevice;
 
+        int _id = 0;
+
     public:
         BaseControl(std::shared_ptr<adapter_t> adapter, bool useSharedDevice)
             : m_adapter(adapter)
@@ -157,9 +161,27 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
         {
             CreateBaseClass();
             RegisterEventHandlersOnSelf();
+
+            _id = getNewId();
         }
 
-        virtual ~BaseControl() = default;
+
+        int getNewId()
+        {
+            static int id = 0;
+            return ++id;
+        }
+
+        virtual ~BaseControl()
+        {
+			// We're not supposed to call unregister functions from the finalizer thread.
+            // From RegisterEventHandlers:
+            //   These handlers have UI thread affinity, so must not be unregistered by a finalizer thread.
+            //   They are registered and unregistered when the control is Loaded or Unloaded.
+            //UnregisterEventHandlers();
+
+            vsDebugOutput(L"BaseControl Destructed");
+        };
 
         IFACEMETHODIMP put_ClearColor(Color value) override
         {
@@ -794,6 +816,8 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
 
             // Check if the DPI changed while we weren't listening for events.
             UpdateDpi();
+
+            vsDebugOutput(L"--> Registered Event Handlers");
         }
 
         void UnregisterEventHandlers()
@@ -804,6 +828,8 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
             m_windowVisibilityChangedEventRegistration.Release();
             m_xamlRootChangedEventRegistration.Release();
             m_deviceLostEventRegistration.Release();
+
+			vsDebugOutput(L"--> Unregistered Event Handlers");
         }
 
         template<typename T, typename DELEGATE, typename HANDLER>
@@ -829,6 +855,8 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
             return ExceptionBoundary(
                 [&]
                 {
+                    vsDebugOutput(L"OnLoaded start");
+
                     // OnLoaded and OnUnloaded are fired from XAML asynchronously, and unfortunately they could
                     // be out of order. If the element is removed from tree A and added to tree B, we could get
                     // a Loaded event for tree B *before* we see the Unloaded event for tree A. To handle this:
@@ -851,9 +879,13 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                         auto lock = GetLock();
                         m_isLoaded = true;
                         lock.unlock();
+                        
+                        vsDebugOutput(L"--> m_isLoaded == true");
                     }
 
                     Changed(ChangeReason::Other);
+
+                    vsDebugOutput(L"OnLoaded end");
                 });
         }
 
@@ -868,19 +900,24 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                     m_isVisible = !!isVisible;
                 }
             }
-            else if (m_window)  // added a null reference check
+            else if (SUCCEEDED(m_window->get_Visible(&isVisible)))
             {
-                // get_Visible fails when running in the designer, in which case we leave m_isVisible set to true.
-                if (SUCCEEDED(m_window->get_Visible(&isVisible)))
-                {
-                    m_isVisible = !!isVisible;
-                }
+                m_isVisible = !!isVisible;
             }
-            else
-            {
-                // When there is neither a XAML root nor a window we aren't visible
-                m_isVisible = false;
-            }
+
+            //else if (m_window)  // added a null reference check
+            //{
+            //    // get_Visible fails when running in the designer, in which case we leave m_isVisible set to true.
+            //    if (SUCCEEDED(m_window->get_Visible(&isVisible)))
+            //    {
+            //        m_isVisible = !!isVisible;
+            //    }
+            //}
+            //else
+            //{
+            //    // When there is neither a XAML root nor a window we aren't visible
+            //    m_isVisible = false;
+            //}
         }
 
         void UpdateDpi()
@@ -924,20 +961,57 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
             As<IFrameworkElement>(GetControl()->GetComposableBase())->get_Parent(&m_lastSeenParent);
         }
 
+        void vsDebugOutput(const LPCWSTR text)
+        {
+            OutputDebugString(L"@@@@@ ");
+
+            char buffer[30];
+            sprintf_s(buffer, "th[%d] id[%d] ", GetCurrentThreadId(), _id);
+            OutputDebugStringA(buffer);
+
+			OutputDebugString(text);
+            
+            char buffer2[30];
+            int loadedCount = m_loadedCount.load();
+            sprintf_s(buffer2, " - m_loadedCount [%d]", loadedCount);
+            OutputDebugStringA(buffer2);
+
+            OutputDebugString(L"\r\n");
+        }
+
         HRESULT OnUnloaded(IInspectable*, IRoutedEventArgs*)
         {
             return ExceptionBoundary(
                 [&]
                 {
+                    vsDebugOutput(L"OnUnloaded start");
+
                     if (--m_loadedCount == 0)
                     {
                         auto lock = GetLock();
                         m_isLoaded = false;
                         lock.unlock();
+                        
+                        vsDebugOutput(L"--> m_isLoaded == false");
 
                         Unloaded();
                         UnregisterEventHandlers();
                     }
+					//else if (m_loadedCount < 0)     // added check after seeing our Page dispose the segment but the unloaded event skipped the count == 0 section
+					//{
+     //                   int value = m_loadedCount.load(std::memory_order_relaxed);
+     //                   char buffer[10];
+     //                   sprintf_s(buffer, "%d", value);
+     //                   OutputDebugStringA(buffer);
+
+     //                   // Ensure our handlers are unregistered
+     //                   UnregisterEventHandlers();
+
+					//	vsDebugOutput(L"OnUnloaded unregistered unloaded object");
+					//}
+
+					
+                    vsDebugOutput(L"OnUnloaded end");
                 });
         }
 
@@ -1015,33 +1089,38 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
             // NOTE:
             // Because OnUnloaded unregisters the events outside a lock, it's possible for
             // m_isLoaded to be changed while we're executing the code within the 
-            // ExceptionBoundary lambda.  Additional checks have been added to reduce the chance
-            // of incorrectly calling functions within the lambda but we're still seeing
-            // some deadlocks when trying to get the mutex within the lock.
+            // ExceptionBoundary lambda for this event handler.
+            // Additional checks have been added to reduce the chance of incorrectly calling functions
+            // within this lambda but we're still seeing some deadlocks when trying to get the mutex
+            // within the lock.
 
             return ExceptionBoundary(
                 [&]
                 {
-
+                    vsDebugOutput(L"OnXamlRootChanged start");
+                    
                     auto lock = GetLock();
-			        boolean isLoaded = m_isLoaded;  
+			        //boolean isLoaded = m_isLoaded;  
                     boolean wasVisible = m_isVisible;
-					if (isLoaded)                   // added check to see if the control is still loaded
-                    {
+					//if (isLoaded)                   // added check to see if the control is still loaded
+     //               {
                         UpdateIsVisible();
-                    }
+                    //}
                     boolean isVisible = m_isVisible;
                     lock.unlock();
 
-					if (wasVisible != isVisible)    // added check to see if the visibility has changed
+					if (wasVisible != isVisible)
                     {
                         WindowVisibilityChanged();
                     }
 
-                    if (isLoaded)                   // added check to see if the control is still loaded
-                    {
+                    //if (isLoaded)                   // added check to see if the control is still loaded
+                    //{
                         UpdateDpi();
-                    }
+                    //}
+
+                    vsDebugOutput(L"OnXamlRootChanged end");
+
                 });
         }
     };
