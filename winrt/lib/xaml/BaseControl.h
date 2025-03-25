@@ -857,14 +857,14 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                 {
                     vsDebugOutput(L"OnLoaded start");
 
-                    // OnLoaded and OnUnloaded are fired from XAML asynchronously, and unfortunately they could
-                    // be out of order. If the element is removed from tree A and added to tree B, we could get
-                    // a Loaded event for tree B *before* we see the Unloaded event for tree A. To handle this:
-                    //  * When we see a Loaded event when we're already loaded, just unregister event handlers
-                    //      for the old tree and register for the new one.
-                    //  * When we get an Unloaded event, check the loaded count. If the element has already been
-                    //      added to another tree, the load count will be nonzero. In that case, we don't update
-                    //      anything because the OnLoaded call has already taken care of things.
+// OnLoaded and OnUnloaded are fired from XAML asynchronously, and unfortunately they could
+// be out of order. If the element is removed from tree A and added to tree B, we could get
+// a Loaded event for tree B *before* we see the Unloaded event for tree A. To handle this:
+//  * When we see a Loaded event when we're already loaded, just unregister event handlers
+//      for the old tree and register for the new one.
+//  * When we get an Unloaded event, check the loaded count. If the element has already been
+//      added to another tree, the load count will be nonzero. In that case, we don't update
+//      anything because the OnLoaded call has already taken care of things.
 
                     UnregisterEventHandlers();
                     RegisterEventHandlers();
@@ -986,30 +986,18 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
                 {
                     vsDebugOutput(L"OnUnloaded start");
 
-                    if (--m_loadedCount == 0)
+                    if (--m_loadedCount < 1)
                     {
                         auto lock = GetLock();
                         m_isLoaded = false;
+                        m_loadedCount = 0;      // we're unloaded now - the loaded count doesn't need to fall below zero
                         lock.unlock();
-                        
+                            
                         vsDebugOutput(L"--> m_isLoaded == false");
 
                         Unloaded();
                         UnregisterEventHandlers();
                     }
-					//else if (m_loadedCount < 0)     // added check after seeing our Page dispose the segment but the unloaded event skipped the count == 0 section
-					//{
-     //                   int value = m_loadedCount.load(std::memory_order_relaxed);
-     //                   char buffer[10];
-     //                   sprintf_s(buffer, "%d", value);
-     //                   OutputDebugStringA(buffer);
-
-     //                   // Ensure our handlers are unregistered
-     //                   UnregisterEventHandlers();
-
-					//	vsDebugOutput(L"OnUnloaded unregistered unloaded object");
-					//}
-
 					
                     vsDebugOutput(L"OnUnloaded end");
                 });
