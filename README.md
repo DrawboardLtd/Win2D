@@ -71,14 +71,14 @@ Studio, add the Win2D NuGet package to your project, and get started using the A
 ## Building Win2D from source
 
 ##### Requirements
-- Visual Studio 2019 16.2 with Tools for Universal Windows Apps 15.0.27428.01 and Windows SDK 18362
+- Visual Studio 2022 17.12.4 with Tools for Universal Windows Apps 15.0.27428.01 and Windows SDK 18362
 
 ##### Clone Repository
 - Go to 'View' -> 'Team Explorer' -> 'Local Git Repositories' -> 'Clone'
 - Add the Win2D repository URL (https://github.com/Microsoft/Win2D.git) and hit 'Clone'
 
 ##### Build NuGet Packages
-- Launch 'Developer Command Prompt for VS2019'
+- Launch 'Developer Command Prompt for VS 2022'
 - Change directory to your cloned Win2D repository and run 'build'
 
 ##### Point Visual Studio at the resulting 'bin' directory
@@ -92,6 +92,30 @@ Studio, add the Win2D NuGet package to your project, and get started using the A
 
 Locally built versions of Win2D are marked as prerelease, so you must change the 'Stable 
 Only' setting to 'Include Prerelease' when adding them to your project.
+
+## Building Win2D UWP from source
+
+UWP has some additional steps to ensure it can build.  The build command relies on `winrt.projection` files in the `bin/anycpu` folder but does not build them.  We can use the Visual Studio solution to ensure the projection files exist before running the build:
+
+Firstly:
+
+- follow the above instructions to clone the Win2D source repo
+- checkout the uwp/main branch
+
+##### Prepare bin/anycpu
+
+- delete the obj/bin folders in the root of the cloned repo from the file system  (start from a clean slate)
+- open the Win2d.uap solution in Visual Studio
+- choose a platform configuration for your device (e.g. x64)
+- build Visual Studio in both Debug and Release modes
+  - this will ensure the winrt.projection files are correctly built in bin/anycpu
+
+The `winrt.projection` debug and release folders should now exist in `bin/anycpu` for the build command to pick up.
+
+##### Build NuGet Packages
+
+- follow the above instructions to build from the command using the Developer Comment Prompt
+
 
 ## Legacy support for Windows 8.1
 Win2D 1.21.0 was the last release to support the Windows 8.1 and Windows Phone 8.1 
