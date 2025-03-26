@@ -31,7 +31,7 @@ xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     <canvas:CanvasControl Draw="canvasControl_Draw" ClearColor="CornflowerBlue" />
 </Grid>
 ```
-and C#:v
+and C#:
 ```cs
 void canvasControl_Draw(CanvasControl sender, CanvasDrawEventArgs args)
 {
