@@ -1,5 +1,9 @@
 # Win2D Changelog
 
+## Win2D 1.28.3
+_March 25, 2025_
+- Fix UWP access violation where events can fire on finalised `BaseControl`
+
 ## Win2D 1.28.2
 _January 22nd, 2025_
 - Enable transitive MSBuild configuration
