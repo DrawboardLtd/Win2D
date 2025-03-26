@@ -29,6 +29,7 @@ IF %ERRORLEVEL% NEQ 0 (
 
 ECHO.
 
+@REM drop the "local" argument to build a shippable package
 CALL "%~dp0build\nuget\build-nupkg.cmd" local
 GOTO END
 
