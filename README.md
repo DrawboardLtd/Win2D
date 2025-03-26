@@ -31,7 +31,7 @@ xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
     <canvas:CanvasControl Draw="canvasControl_Draw" ClearColor="CornflowerBlue" />
 </Grid>
 ```
-and C#:
+and C#:v
 ```cs
 void canvasControl_Draw(CanvasControl sender, CanvasDrawEventArgs args)
 {
@@ -95,20 +95,20 @@ Only' setting to 'Include Prerelease' when adding them to your project.
 
 ## Building Win2D UWP from source
 
-UWP has some additional steps to ensure it can build.  The build command relies on `winrt.projection` files in the `bin/anycpu` folder but does not build them.  We can use the Visual Studio solution to ensure the projection files exist before running the build:
+UWP has some additional steps to ensure it can build.  The build command relies on `winrt.projection` files in the `bin/anycpu` folder but does not build them.  We can use the Visual Studio solution to ensure the projection files exist before running the build.
 
-Firstly:
+First:
 
 - follow the above instructions to clone the Win2D source repo
 - checkout the uwp/main branch
 
 ##### Prepare bin/anycpu
 
-- delete the obj/bin folders in the root of the cloned repo from the file system  (start from a clean slate)
-- open the Win2d.uap solution in Visual Studio
-- choose a platform configuration for your device (e.g. x64)
-- build Visual Studio in both Debug and Release modes
-  - this will ensure the winrt.projection files are correctly built in bin/anycpu
+- delete the `obj` and `bin` folders in the root of the cloned repo from the file system  (start from a clean slate)
+- open the `Win2d.uap` solution in Visual Studio
+- choose a platform configuration for your device (e.g. `x64`)
+- build Visual Studio in both `Debug` and `Release` modes
+  - this will ensure the `winrt.projection` files are correctly compiled into `bin/anycpu`
 
 The `winrt.projection` debug and release folders should now exist in `bin/anycpu` for the build command to pick up.
 
