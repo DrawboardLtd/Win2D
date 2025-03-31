@@ -921,10 +921,11 @@ namespace ABI { namespace Microsoft { namespace Graphics { namespace Canvas { na
             return ExceptionBoundary(
                 [&]
                 {
-                    if (--m_loadedCount == 0)
+                    if (--m_loadedCount < 1)
                     {
                         auto lock = GetLock();
                         m_isLoaded = false;
+                        m_loadedCount = 0;      // we're unloaded now - the loaded count doesn't need to fall below zero
                         lock.unlock();
 
                         Unloaded();

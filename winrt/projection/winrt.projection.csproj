@@ -64,11 +64,9 @@
   <!-- CsWinRT input projects and assemblies -->
   <ItemGroup>
     <ProjectReference Include="..\lib\winrt.lib.uap.vcxproj" PrivateAssets="compile" />
-    <CSWinRTInputs Include="$(MergedWinmdDirectory)\Microsoft.Graphics.Canvas.winmd" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Windows.CSWinRT" Version="2.1.6" />
-    <PackageReference Include="Microsoft.SourceLink.AzureRepos.Git" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 </Project>
