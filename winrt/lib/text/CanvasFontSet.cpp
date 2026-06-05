@@ -74,15 +74,30 @@ IFACEMETHODIMP CanvasFontSetFactory::GetSystemFontSet(
         [&]
         {
             CheckAndClearOutPointer(fontSet);
-            
+
             auto factory = CustomFontManager::GetInstance()->GetSharedFactory();
 
             ComPtr<DWriteFontSetType> systemFonts;
 
-            ComPtr<DWriteFontSetType> systemFontsIncludingRemoteFonts;
-
-            ThrowIfFailed(As<IDWriteFactory3>(factory)->GetSystemFontSet(&systemFontsIncludingRemoteFonts));
-            systemFonts = GetLocalFonts(systemFontsIncludingRemoteFonts);
+            // Prefer IDWriteFactory6::GetSystemFontSet(includeDownloadableFonts=FALSE), which
+            // returns a local-only system font set directly. The IDWriteFactory3 path below has
+            // to filter remote fonts via IDWriteFontSetBuilder::CreateFontSet, which has been
+            // observed to AV inside DWrite (FontSetBuilder::WriteRegion) on some user machines.
+            // IDWriteFactory6 is available on Windows 10 1903+; fall back to the older path on
+            // earlier versions (WinAppSDK min target is 1809).
+            ComPtr<IDWriteFactory6> factory6;
+            if (SUCCEEDED(factory.As(&factory6)))
+            {
+                ComPtr<IDWriteFontSet1> localSystemFonts;
+                ThrowIfFailed(factory6->GetSystemFontSet(FALSE, &localSystemFonts));
+                ThrowIfFailed(localSystemFonts.As(&systemFonts));
+            }
+            else
+            {
+                ComPtr<DWriteFontSetType> systemFontsIncludingRemoteFonts;
+                ThrowIfFailed(As<IDWriteFactory3>(factory)->GetSystemFontSet(&systemFontsIncludingRemoteFonts));
+                systemFonts = GetLocalFonts(systemFontsIncludingRemoteFonts);
+            }
 
             auto canvasFontSet = ResourceManager::GetOrCreate<ICanvasFontSet>(systemFonts.Get());
 
