@@ -95,7 +95,7 @@ Only' setting to 'Include Prerelease' when adding them to your project.
 
 ## Building Drawboard's Win2D.uwp package
 
-This fork's `uwp/main` is the official 1.28.2 plus the fix for [Win2D #954](https://github.com/microsoft/Win2D/issues/954), and it is published to Drawboard's private `Drawboard.Win2D` feed by the Azure DevOps pipeline [`.pipelines/Drawboard-Package.yml`](.pipelines/Drawboard-Package.yml). Its header says how to release a new version.
+This fork's `uwp/main` is Microsoft's `uwp/main` (merged in from https://github.com/microsoft/Win2D) plus the fix for [Win2D #954](https://github.com/microsoft/Win2D/issues/954), which Microsoft hasn't taken. To take a later Microsoft release, merge their `uwp/main` into a branch and PR it into ours; the build refuses to run if a merge loses the fix. It is published to Drawboard's private `Drawboard.Win2D` feed by the Azure DevOps pipeline [`.pipelines/Drawboard-Package.yml`](.pipelines/Drawboard-Package.yml). Its header says how to release a new version.
 
 To build the same package locally, run `build\drawboard\Build-Win2DPackage.ps1` from any PowerShell. It needs Visual Studio 2022 (Build Tools will do) with the v143 C++ toolset and its Universal Windows Platform support, including ARM64 (`Microsoft.VisualStudio.Component.UWP.VC.ARM64`), a Windows 10/11 SDK and the .NET SDK. It builds x86, x64, ARM64 and the C#/WinRT projection, writes `bin\Win2D.uwp.<version>.nupkg`, and checks it with `build\drawboard\Test-Win2DPackage.ps1`. Without the .NET Framework 4.7.2 targeting pack, pass `-IntellisenseXml` (see the script's help).
 

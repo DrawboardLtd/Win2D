@@ -1,4 +1,4 @@
-# Drawboard's Win2D.uwp package: this fork (the official 1.28.2 plus the fix for Win2D #954, which Microsoft's
+# Drawboard's Win2D.uwp package: this fork (Microsoft's uwp/main plus the fix for Win2D #954, which Microsoft's
 # own builds don't have), built for x86, x64 and ARM64 with the C#/WinRT projection modern .NET needs, and
 # published to the private Drawboard.Win2D feed that Drawboard PDF and Drawboard Projects restore it from.
 #

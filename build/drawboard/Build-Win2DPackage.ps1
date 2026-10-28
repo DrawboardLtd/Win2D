@@ -16,8 +16,9 @@
 
 .PARAMETER IntellisenseXml
   Package this Microsoft.Graphics.Canvas.xml instead of building the docs, on a machine without the .NET
-  Framework 4.7.2 targeting pack. The official Win2D.uwp 1.28.2 package's lib\uap10.0\Microsoft.Graphics.Canvas.xml
-  is the same file, since the fork hasn't changed winrt\docsrc.
+  Framework 4.7.2 targeting pack. The lib\uap10.0\Microsoft.Graphics.Canvas.xml in Microsoft's Win2D.uwp package of
+  the version this fork is merged up to (build\nuget\VERSION's first three parts) is the same file, since the fork
+  hasn't changed winrt\docsrc.
 
 .PARAMETER Clean
   Delete bin\ and obj\ first.
