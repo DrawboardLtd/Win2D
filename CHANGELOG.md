@@ -1,5 +1,13 @@
 # Win2D Changelog
 
+## Win2D 1.28.3.1 (Drawboard fork)
+_October 28, 2026_
+- Restore the .NET projection's `CSWinRTInputs`, so `Microsoft.Graphics.Canvas.Interop.dll` projects Win2D again (1.28.3 shipped an empty one)
+- Package the native PDBs
+- Drop ARM32 (`win-arm`)
+- Restore from nuget.org, and build against a later Windows SDK with `/p:UniversalApiContractVersion`
+- Versioned 1.28.3.1 because Microsoft has since released an official 1.28.3 without the `BaseControl` fix
+
 ## Win2D 1.28.3
 _March 25, 2025_
 - Fix UWP access violation where events can fire on finalised `BaseControl`
