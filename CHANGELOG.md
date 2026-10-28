@@ -5,6 +5,7 @@ _October 28, 2026_
 - Restore the .NET projection's `CSWinRTInputs`, so `Microsoft.Graphics.Canvas.Interop.dll` projects Win2D again (1.28.3 shipped an empty one)
 - Package the native PDBs
 - Drop ARM32 (`win-arm`)
+- Build, check and publish the package with `.pipelines/Drawboard-Package.yml` and `build/drawboard/`
 - Restore from nuget.org, and build against a later Windows SDK with `/p:UniversalApiContractVersion`
 - Versioned 1.28.3.1 because Microsoft has since released an official 1.28.3 without the `BaseControl` fix
 
