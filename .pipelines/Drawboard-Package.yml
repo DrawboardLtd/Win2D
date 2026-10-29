@@ -2,10 +2,9 @@
 # own builds don't have), built for x86, x64 and ARM64 with the C#/WinRT projection modern .NET needs, and
 # published to the private Drawboard.Win2D feed that Drawboard PDF and Drawboard Projects restore it from.
 #
-# The Build stage builds and checks the package (build\drawboard\Build-Win2DPackage.ps1, which also runs
-# locally) and keeps it as the run's "package" artifact. PRs into uwp/main run it, so a change that breaks the
-# package shows up before it merges. The Publish stage pushes that same artifact, not a rebuild, so the package
-# on the feed is exactly the one that was checked (and tested, if the environment asks for an approval).
+# Every run builds and checks the package (build\drawboard\Build-Win2DPackage.ps1, which also runs locally) and
+# keeps it as the run's "package" artifact. PRs into uwp/main run it, so a change that breaks the package shows
+# up before it merges. A publish run then pushes the package it has just built and checked.
 #
 # To release a new version:
 #   1. In a PR into uwp/main, bump build\nuget\VERSION and add it to CHANGELOG.md. Azure Artifacts never lets a
@@ -14,13 +13,10 @@
 #   2. Run this pipeline on uwp/main with "Publish to the Drawboard.Win2D feed" ticked.
 #   3. Pin the version in the Drawboard monorepo's Shared\Directory.Packages.props.
 #
-# One-time setup in Azure DevOps:
-#   - The identity this pipeline runs as needs the Feed Publisher (Contributor) role on the Drawboard.Win2D feed
-#     (Drawboard.Shared project > Artifacts > Drawboard.Win2D > Feed settings > Permissions). That's
-#     "<project> Build Service (drawboard)", or "Project Collection Build Service (drawboard)" if the project
-#     doesn't limit job authorization scope to itself.
-#   - The Publish stage deploys to the environment "Drawboard-Win2D-feed", created on its first run. Add an
-#     Approvals check to it (Pipelines > Environments) to have someone test the run's package before it's pushed.
+# One-time setup in Azure DevOps: the identity this pipeline runs as needs the Feed Publisher (Contributor) role
+# on the Drawboard.Win2D feed (Drawboard.Shared project > Artifacts > Drawboard.Win2D > Feed settings >
+# Permissions). That's "<project> Build Service (drawboard)", or "Project Collection Build Service (drawboard)" if
+# the pipeline's project doesn't limit job authorization scope to itself.
 
 trigger: none
 
@@ -45,89 +41,71 @@ pool:
 variables:
   feed: https://pkgs.dev.azure.com/drawboard/Drawboard.Shared/_packaging/Drawboard.Win2D/nuget/v3/index.json
 
-stages:
-- stage: Build
-  jobs:
-  - job: Package
-    displayName: Build and check Win2D.uwp
-    timeoutInMinutes: 180
-    steps:
-    - checkout: self
-      clean: true
+jobs:
+- job: Package
+  displayName: Build and check Win2D.uwp
+  timeoutInMinutes: 180
+  steps:
+  - checkout: self
+    clean: true
 
-    - ${{ if eq(parameters.publish, true) }}:
-      - task: PowerShell@2
-        displayName: Check this is uwp/main
-        inputs:
-          pwsh: true
-          targetType: inline
-          script: |
-            if ('$(Build.SourceBranch)' -ne 'refs/heads/uwp/main')
-            {
-              throw "Only uwp/main is published, not $(Build.SourceBranch). Merge it into uwp/main first."
-            }
-
+  - ${{ if eq(parameters.publish, true) }}:
     - task: PowerShell@2
-      displayName: Read the version
+      displayName: Check this is uwp/main
       inputs:
         pwsh: true
         targetType: inline
         script: |
-          $version = (Get-Content build\nuget\VERSION -TotalCount 1).Trim()
-          $preRelease = Get-Content build\nuget\VERSION-PRERELEASE -TotalCount 1 -ErrorAction SilentlyContinue
-          if ($preRelease) { $version = $version + '-' + $preRelease.Trim() }
-          Write-Host "##vso[task.setvariable variable=packageVersion]$version"
-          Write-Host "##vso[build.updatebuildnumber]Win2D.uwp $version ($(Build.BuildNumber))"
+          if ('$(Build.SourceBranch)' -ne 'refs/heads/uwp/main')
+          {
+            throw "Only uwp/main is published, not $(Build.SourceBranch). Merge it into uwp/main first."
+          }
 
-    - task: NuGetToolInstaller@1
-      displayName: Install nuget.exe
+  - task: PowerShell@2
+    displayName: Read the version
+    inputs:
+      pwsh: true
+      targetType: inline
+      script: |
+        $version = (Get-Content build\nuget\VERSION -TotalCount 1).Trim()
+        $preRelease = Get-Content build\nuget\VERSION-PRERELEASE -TotalCount 1 -ErrorAction SilentlyContinue
+        if ($preRelease) { $version = $version + '-' + $preRelease.Trim() }
+        Write-Host "##vso[task.setvariable variable=packageVersion]$version"
+        Write-Host "##vso[build.updatebuildnumber]Win2D.uwp $version ($(Build.BuildNumber))"
 
+  - task: NuGetToolInstaller@1
+    displayName: Install nuget.exe
+
+  - task: PowerShell@2
+    displayName: Build and check the package
+    inputs:
+      pwsh: true
+      filePath: build/drawboard/Build-Win2DPackage.ps1
+
+  - task: PublishPipelineArtifact@1
+    displayName: Keep the package
+    inputs:
+      targetPath: bin/Win2D.uwp.$(packageVersion).nupkg
+      artifact: package
+
+  - task: PublishPipelineArtifact@1
+    displayName: Keep the build logs
+    condition: failed()
+    inputs:
+      targetPath: bin/logs
+      artifact: logs
+
+  # The package pushed is the one this run has just built and checked
+  - ${{ if eq(parameters.publish, true) }}:
+    - task: NuGetAuthenticate@1
+      displayName: Sign in to the Drawboard feeds
+
+    # A version already on the feed fails here (409 Conflict): bump build\nuget\VERSION.
     - task: PowerShell@2
-      displayName: Build and check the package
+      displayName: Publish to the Drawboard.Win2D feed
       inputs:
         pwsh: true
-        filePath: build/drawboard/Build-Win2DPackage.ps1
-
-    - task: PublishPipelineArtifact@1
-      displayName: Keep the package
-      inputs:
-        targetPath: bin/Win2D.uwp.$(packageVersion).nupkg
-        artifact: package
-
-    - task: PublishPipelineArtifact@1
-      displayName: Keep the build logs
-      condition: failed()
-      inputs:
-        targetPath: bin/logs
-        artifact: logs
-
-- ${{ if eq(parameters.publish, true) }}:
-  - stage: Publish
-    dependsOn: Build
-    jobs:
-    - deployment: Push
-      displayName: Push to the Drawboard.Win2D feed
-      environment: Drawboard-Win2D-feed
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-            # A deployment job downloads the run's artifacts to $(Pipeline.Workspace) before these steps
-            - task: NuGetToolInstaller@1
-              displayName: Install nuget.exe
-
-            - task: NuGetAuthenticate@1
-              displayName: Sign in to the Drawboard feeds
-
-            # A version already on the feed fails here (409 Conflict): bump build\nuget\VERSION.
-            - task: PowerShell@2
-              displayName: Push the package
-              inputs:
-                pwsh: true
-                targetType: inline
-                script: |
-                  $packages = @(Get-ChildItem '$(Pipeline.Workspace)\package' -Filter 'Win2D.uwp.*.nupkg')
-                  $count = $packages.Count
-                  if ($count -ne 1) { throw "Expected one package in the run's artifact, found $count." }
-                  nuget push $packages[0].FullName -Source '$(feed)' -ApiKey az -NonInteractive
-                  if ($LASTEXITCODE -ne 0) { throw "nuget push failed (exit $LASTEXITCODE)." }
+        targetType: inline
+        script: |
+          nuget push 'bin\Win2D.uwp.$(packageVersion).nupkg' -Source '$(feed)' -ApiKey az -NonInteractive
+          if ($LASTEXITCODE -ne 0) { throw "nuget push failed (exit $LASTEXITCODE)." }
