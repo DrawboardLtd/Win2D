@@ -1,8 +1,22 @@
 # Win2D Changelog
 
-## Win2D 1.28.3
+## Win2D 1.28.3.1 (Drawboard fork)
+_October 28, 2026_
+- Microsoft's 1.28.3, plus our fix for the UWP access violation where events can fire on a finalised `BaseControl` ([#954](https://github.com/microsoft/Win2D/issues/954)). Microsoft's 1.28.3 still crashes on it.
+- Restore the .NET projection's `CSWinRTInputs`, so `Microsoft.Graphics.Canvas.Interop.dll` projects Win2D again (our 1.28.3 shipped an empty one)
+- Package the native PDBs
+- Drop ARM32 (`win-arm`)
+- Build, check and publish the package with `.pipelines/Drawboard-Package.yml` and `build/drawboard/`
+- Restore from nuget.org, and build against a later Windows SDK with `/p:UniversalApiContractVersion`
+- Numbered 1.28.3.1: Microsoft's builds on nuget.org own the three-part numbers
+
+## Win2D 1.28.3 (Drawboard fork)
 _March 25, 2025_
-- Fix UWP access violation where events can fire on finalised `BaseControl`
+- Microsoft's 1.28.2, plus our fix for the UWP access violation where events can fire on a finalised `BaseControl`
+
+## Win2D 1.28.3
+_February 26th, 2025_
+- Update Windows SDK projections and CsWinRT to latest
 
 ## Win2D 1.28.2
 _January 22nd, 2025_

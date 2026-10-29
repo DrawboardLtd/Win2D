@@ -93,28 +93,11 @@ Studio, add the Win2D NuGet package to your project, and get started using the A
 Locally built versions of Win2D are marked as prerelease, so you must change the 'Stable 
 Only' setting to 'Include Prerelease' when adding them to your project.
 
-## Building Win2D UWP from source
+## Building Drawboard's Win2D.uwp package
 
-UWP has some additional steps to ensure it can build.  The build command relies on `winrt.projection` files in the `bin/anycpu` folder but does not build them.  We can use the Visual Studio solution to ensure the projection files exist before running the build.
+This fork's `uwp/main` is Microsoft's `uwp/main` (merged in from https://github.com/microsoft/Win2D) plus the fix for [Win2D #954](https://github.com/microsoft/Win2D/issues/954), which Microsoft hasn't taken. To take a later Microsoft release, merge their `uwp/main` into a branch and PR it into ours; the build refuses to run if a merge loses the fix. It is published to Drawboard's private `Drawboard.Win2D` feed by the Azure DevOps pipeline [`.pipelines/Drawboard-Package.yml`](.pipelines/Drawboard-Package.yml). Its header says how to release a new version.
 
-First:
-
-- follow the above instructions to clone the Win2D source repo
-- checkout the uwp/main branch
-
-##### Prepare bin/anycpu
-
-- delete the `obj` and `bin` folders in the root of the cloned repo from the file system  (start from a clean slate)
-- open the `Win2d.uap` solution in Visual Studio
-- choose a platform configuration for your device (e.g. `x64`)
-- build Visual Studio in both `Debug` and `Release` modes
-  - this will ensure the `winrt.projection` files are correctly compiled into `bin/anycpu`
-
-The `winrt.projection` debug and release folders should now exist in `bin/anycpu` for the build command to pick up.
-
-##### Build NuGet Packages
-
-- follow the above instructions to build from the command using the Developer Comment Prompt
+To build the same package locally, run `build\drawboard\Build-Win2DPackage.ps1` from any PowerShell. It needs Visual Studio 2022 (Build Tools will do) with the v143 C++ toolset and its Universal Windows Platform support, including ARM64 (`Microsoft.VisualStudio.Component.UWP.VC.ARM64`), a Windows 10/11 SDK and the .NET SDK. It builds x86, x64, ARM64 and the C#/WinRT projection, writes `bin\Win2D.uwp.<version>.nupkg`, and checks it with `build\drawboard\Test-Win2DPackage.ps1`. Without the .NET Framework 4.7.2 targeting pack, pass `-IntellisenseXml` (see the script's help).
 
 
 ## Legacy support for Windows 8.1
